@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Универсальный Тест Библейских Переводов (Сравнение)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -287,33 +288,33 @@
       <div class="select-group" style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
         
         <div style="flex-grow: 1;">
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Выберите переводы для сравнения:</label>
-          <div id="translationCheckboxes">
+          <label for="translationCheckboxes" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Выберите переводы для сравнения:</label>
+          <div id="translationCheckboxes" role="group" aria-labelledby="translationCheckboxes">
             </div>
         </div>
         
         <div style="flex-grow: 1; max-width: 200px;">
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Книга:</label>
-          <select id="bookSelect" style="width: 100%; padding: 0.5rem; border: 2px solid var(--border); border-radius: 0.5rem;">
+          <label for="bookSelect" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Книга:</label>
+          <select id="bookSelect" aria-label="Выберите книгу Библии" style="width: 100%; padding: 0.5rem; border: 2px solid var(--border); border-radius: 0.5rem;">
             </select>
         </div>
         
         <div style="max-width: 100px;">
-          <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Глава:</label>
-          <select id="chapterSelect" style="width: 100%; padding: 0.5rem; border: 2px solid var(--border); border-radius: 0.5rem;">
+          <label for="chapterSelect" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem;">Глава:</label>
+          <select id="chapterSelect" aria-label="Выберите главу" style="width: 100%; padding: 0.5rem; border: 2px solid var(--border); border-radius: 0.5rem;">
             </select>
         </div>
         
         <div style="display: flex; gap: 0.5rem; align-self: flex-end;">
-          <button class="btn-bordered" id="prevChapter" title="Предыдущая глава">← Назад</button>
-          <button class="btn-bordered" id="nextChapter" title="Следующая глава">Вперед →</button>
+          <button class="btn-bordered" id="prevChapter" title="Предыдущая глава" aria-label="Перейти к предыдущей главе">← Назад</button>
+          <button class="btn-bordered" id="nextChapter" title="Следующая глава" aria-label="Перейти к следующей главе">Вперед →</button>
         </div>
       </div>
     </div>
 
     <h3 id="modalTitle" style="margin-bottom: 1rem; text-align: center;"></h3>
     
-    <div id="verseContent"></div>
+    <div id="verseContent" role="main" aria-live="polite"></div>
   </div>
 
   <script>
@@ -413,39 +414,98 @@
     const bookSelect = document.getElementById('bookSelect');
     const chapterSelect = document.getElementById('chapterSelect');
     
+    // Новые глобальные переменные
+    const STORAGE_KEY_BOOK = 'bibleApp_bookIndex';
+    const STORAGE_KEY_CHAPTER = 'bibleApp_chapter';
+    const STORAGE_KEY_TRANSLATIONS = 'bibleApp_translations';
+    
     let currentBookIndex = 0;
     let currentChapter = 1;
 
+    /**
+     * @description Получает данные из кэша localStorage.
+     * @param {string} key Ключ для кэша.
+     * @returns {any | null} Кэшированные данные или null.
+     */
+    function getCache(key) {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            // Простая проверка срока годности (1 час)
+            const hour = 60 * 60 * 1000;
+            if (Date.now() - timestamp < hour) {
+                return data;
+            } else {
+                localStorage.removeItem(key); // Удаляем просроченный кэш
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @description Сохраняет данные в кэш localStorage.
+     * @param {string} key Ключ для кэша.
+     * @param {any} data Данные для сохранения.
+     */
+    function setCache(key, data) {
+        const cacheEntry = {
+            data: data,
+            timestamp: Date.now(),
+        };
+        localStorage.setItem(key, JSON.stringify(cacheEntry));
+    }
+    
     function getBookNumber(abbr) { return map[abbr] || null; }
     
     function getSelectedTranslations() {
         const checkboxes = document.querySelectorAll('#translationCheckboxes input[type="checkbox"]:checked');
-        return Array.from(checkboxes).map(cb => cb.value);
+        const selected = Array.from(checkboxes).map(cb => cb.value);
+        
+        // Сохраняем выбранные переводы в localStorage
+        localStorage.setItem(STORAGE_KEY_TRANSLATIONS, JSON.stringify(selected));
+        
+        return selected;
     }
 
     function updateChapterSelector() {
       const book = BIBLE_BOOKS[currentBookIndex];
+      const fragment = document.createDocumentFragment(); // Используем DocumentFragment
       chapterSelect.innerHTML = '';
       for (let i = 1; i <= book.chapters; i++) {
         const option = document.createElement('option');
         option.value = i;
         option.textContent = i;
-        chapterSelect.appendChild(option);
+        fragment.appendChild(option);
       }
+      chapterSelect.appendChild(fragment);
       chapterSelect.value = currentChapter;
     }
     
     function initializeTranslationCheckboxes() {
         const container = document.getElementById('translationCheckboxes');
+        const fragment = document.createDocumentFragment(); // Используем DocumentFragment
         
+        // Загружаем сохраненные переводы или используем значения по умолчанию
+        let savedTranslations = [];
+        try {
+             const saved = localStorage.getItem(STORAGE_KEY_TRANSLATIONS);
+             if (saved) savedTranslations = JSON.parse(saved);
+        } catch (e) {
+             console.error("Error loading translations from localStorage", e);
+             savedTranslations = [];
+        }
+        
+        const defaultTranslations = savedTranslations.length > 0 ? savedTranslations : ["SYNOD", "UBIO"];
+
         UKRAINIAN_RUSSIAN_TRANSLATIONS.forEach(t => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = t.code;
             checkbox.id = `cb-${t.code}`;
+            checkbox.setAttribute('role', 'switch'); // ARIA role
             
-            // Выбираем Синодальный (Рус.) и Огиенко (Укр.) по умолчанию
-            if (t.code === "SYNOD" || t.code === "UBIO") {
+            // Выбираем сохраненные или значения по умолчанию
+            if (defaultTranslations.includes(t.code)) {
                  checkbox.checked = true;
             }
 
@@ -455,9 +515,11 @@
             label.setAttribute('for', `cb-${t.code}`);
             label.textContent = t.name;
 
-            container.appendChild(checkbox);
-            container.appendChild(label);
+            fragment.appendChild(checkbox);
+            fragment.appendChild(label);
         });
+        
+        container.appendChild(fragment);
     }
 
     async function loadComparisonView() {
@@ -465,6 +527,16 @@
       const book = BIBLE_BOOKS[currentBookIndex];
       const bookNumber = getBookNumber(book.abbr);
       
+      // Обновление глубокой ссылки и localStorage
+      const urlParams = new URLSearchParams();
+      urlParams.set('book', book.abbr);
+      urlParams.set('chapter', currentChapter);
+      urlParams.set('translations', selectedTranslations.join(','));
+      history.pushState({ book: book.abbr, chapter: currentChapter, translations: selectedTranslations }, '', `?${urlParams.toString()}`);
+      
+      localStorage.setItem(STORAGE_KEY_BOOK, currentBookIndex);
+      localStorage.setItem(STORAGE_KEY_CHAPTER, currentChapter);
+
       const titleTranslations = selectedTranslations
           .map(code => UKRAINIAN_RUSSIAN_TRANSLATIONS.find(t => t.code === code)?.name || code)
           .join(' / ');
@@ -479,11 +551,18 @@
       verseContent.innerHTML = '<p style="text-align: center; padding: 2rem;">Загрузка текста для сравнения...</p>';
       
       try {
+          // --- Шаг 1: Получение основных стихов (для списка номеров стихов) ---
           const baseTranslationCode = "SYNOD";
-          const baseApiUrl = `${BIBLE_API_BASE}${baseTranslationCode}/${bookNumber}/${currentChapter}/`;
-          const baseResponse = await fetch(baseApiUrl);
-          if (!baseResponse.ok) throw new Error('Base network response was not ok');
-          const baseVerses = await baseResponse.json();
+          const baseCacheKey = `base_verses_${bookNumber}_${currentChapter}`;
+          let baseVerses = getCache(baseCacheKey);
+
+          if (!baseVerses) {
+              const baseApiUrl = `${BIBLE_API_BASE}${baseTranslationCode}/${bookNumber}/${currentChapter}/`;
+              const baseResponse = await fetch(baseApiUrl);
+              if (!baseResponse.ok) throw new Error('Base network response was not ok');
+              baseVerses = await baseResponse.json();
+              setCache(baseCacheKey, baseVerses); // Кэшируем
+          }
           
           if (baseVerses.length === 0) {
                verseContent.innerHTML = '<p style="text-align: center; padding: 2rem;">Текст не найден. Возможно, глава не существует в выбранной книге.</p>';
@@ -493,23 +572,32 @@
           const verseNumbers = baseVerses.map(v => v.verse).filter(v => v !== undefined);
           const versesMap = new Map(); 
           
-          const postBody = {
-              translations: selectedTranslations,
-              verses: verseNumbers,
-              book: bookNumber,
-              chapter: currentChapter,
-          };
+          // --- Шаг 2: Получение параллельных стихов ---
+          const parallelCacheKey = `parallel_verses_${bookNumber}_${currentChapter}_${selectedTranslations.join('_')}`;
+          let resultArrays = getCache(parallelCacheKey);
+          
+          if (!resultArrays) {
+              const postBody = {
+                  translations: selectedTranslations,
+                  verses: verseNumbers,
+                  book: bookNumber,
+                  chapter: currentChapter,
+              };
 
-          const parallelResponse = await fetch('https://bolls.life/get-parallel-verses/', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(postBody),
-          });
+              const parallelResponse = await fetch('https://bolls.life/get-parallel-verses/', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(postBody),
+              });
+              
+              if (!parallelResponse.ok) throw new Error('Parallel network response was not ok');
+              
+              resultArrays = await parallelResponse.json(); 
+              setCache(parallelCacheKey, resultArrays); // Кэшируем
+          }
           
-          if (!parallelResponse.ok) throw new Error('Parallel network response was not ok');
           
-          const resultArrays = await parallelResponse.json(); 
-          
+          // Обработка результатов
           resultArrays.flat().forEach(v => {
               if (v.verse) {
                   if (!versesMap.has(v.verse)) versesMap.set(v.verse, new Map());
@@ -519,33 +607,36 @@
           
           // Рендеринг сравнительной сетки
           const colCount = selectedTranslations.length;
-          let html = `<div id="comparisonGrid" style="grid-template-columns: 50px repeat(${colCount}, 1fr);">`;
+          let html = `<div id="comparisonGrid" role="table" aria-label="Сравнение переводов Библии" style="grid-template-columns: 50px repeat(${colCount}, 1fr);">`;
           
           // Заголовки столбцов
-          html += '<div class="header-row">';
-          html += `<div class="header-cell verse-num">№</div>`;
+          html += '<div class="header-row" role="rowgroup">';
+          html += `<div class="header-cell verse-num" role="columnheader" aria-sort="none">№</div>`;
           selectedTranslations.forEach(code => {
               const name = UKRAINIAN_RUSSIAN_TRANSLATIONS.find(t => t.code === code)?.name || code;
-              html += `<div class="header-cell translation-name">${name.split(' (')[0]}</div>`; 
+              html += `<div class="header-cell translation-name" role="columnheader">${name.split(' (')[0]}</div>`; 
           });
           html += '</div>';
 
           // Строки стихов
           verseNumbers.forEach(verseNum => {
-              html += '<div class="verse-row">';
-              html += `<div class="verse-num-cell verse-num">${verseNum}</div>`;
+              html += '<div class="verse-row" role="row">';
+              html += `<div class="verse-num-cell verse-num" role="rowheader">${verseNum}</div>`;
               
               selectedTranslations.forEach(code => {
                   const verseData = versesMap.get(verseNum)?.get(code);
                   
-                  // Добавляем номер стиха в начало текста 
-                  const text = verseData 
-                      ? `<span class="verse-text-number">${verseNum}</span> ${verseData.text}` 
-                      : '<span style="color: grey;">(Нет текста)</span>';
+                  let text = '<span style="color: grey;">(Нет текста)</span>';
+
+                  if (verseData && verseData.text) {
+                      // --- ЗАЩИТА ОТ XSS (Очистка текста) ---
+                      const cleanText = DOMPurify.sanitize(verseData.text);
+                      text = `<span class="verse-text-number">${verseNum}</span> ${cleanText}`; 
+                  }
                       
                   const name = UKRAINIAN_RUSSIAN_TRANSLATIONS.find(t => t.code === code)?.name.split(' (')[0] || code;
                   // Добавление data-translation-name для мобильного отображения
-                  html += `<div class="verse-text-cell verse-text" data-translation-name="${name}">${text}</div>`;
+                  html += `<div class="verse-text-cell verse-text" role="cell" data-translation-name="${name}">${text}</div>`;
               });
               html += '</div>';
           });
@@ -588,19 +679,51 @@
       chapterSelect.value = currentChapter;
       loadComparisonView();
     }
-
+    
+    /**
+     * @description Инициализация приложения, включая загрузку состояния из URL и localStorage.
+     */
     function initializeBibleSelector() {
-      // Заполняем селектор книг
+      // --- 1. Обработка URL и localStorage для начального состояния ---
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlBookAbbr = urlParams.get('book');
+      const urlChapter = parseInt(urlParams.get('chapter'));
+      
+      let initialBookIndex = parseInt(localStorage.getItem(STORAGE_KEY_BOOK)) || 0;
+      let initialChapter = parseInt(localStorage.getItem(STORAGE_KEY_CHAPTER)) || 1;
+      
+      if (urlBookAbbr) {
+          const bookIndexFromAbbr = BIBLE_BOOKS.findIndex(b => b.abbr === urlBookAbbr);
+          if (bookIndexFromAbbr !== -1) {
+              initialBookIndex = bookIndexFromAbbr;
+              // Если в URL указана книга, используем главу из URL, если она действительна
+              if (urlChapter && urlChapter >= 1 && urlChapter <= BIBLE_BOOKS[initialBookIndex].chapters) {
+                  initialChapter = urlChapter;
+              } else {
+                  initialChapter = 1; 
+              }
+          }
+      }
+      
+      currentBookIndex = initialBookIndex;
+      currentChapter = initialChapter;
+
+
+      // --- 2. Заполнение селектора книг (с DocumentFragment) ---
+      const bookFragment = document.createDocumentFragment();
       BIBLE_BOOKS.forEach((book, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.textContent = `${book.name}`; 
-        bookSelect.appendChild(option);
+        bookFragment.appendChild(option);
       });
+      bookSelect.appendChild(bookFragment);
+      bookSelect.value = currentBookIndex;
       
+      // --- 3. Инициализация флажков переводов (с DocumentFragment и localStorage) ---
       initializeTranslationCheckboxes(); 
       
-      // Обработчики событий
+      // --- 4. Обработчики событий ---
       bookSelect.addEventListener('change', function() {
         currentBookIndex = parseInt(this.value);
         currentChapter = 1; 
@@ -615,8 +738,27 @@
       
       document.getElementById('prevChapter').addEventListener('click', goToPrevChapter);
       document.getElementById('nextChapter').addEventListener('click', goToNextChapter);
+      
+      // Обработка кнопки "Назад/Вперед" в браузере
+      window.addEventListener('popstate', function(event) {
+          const state = event.state;
+          if (state) {
+              const bookIndexFromAbbr = BIBLE_BOOKS.findIndex(b => b.abbr === state.book);
+              if (bookIndexFromAbbr !== -1) {
+                  currentBookIndex = bookIndexFromAbbr;
+                  bookSelect.value = currentBookIndex;
+              }
+              currentChapter = state.chapter;
+              chapterSelect.value = currentChapter;
+              // Восстановление выбранных переводов из URL/State - это сложнее, 
+              // поэтому полагаемся на getSelectedTranslations, которое берет из localStorage
+              updateChapterSelector(); 
+              loadComparisonView(); 
+          }
+      });
 
-      // Начальная загрузка
+
+      // --- 5. Начальная загрузка ---
       updateChapterSelector();
       loadComparisonView();
     }
