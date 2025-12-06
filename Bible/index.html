@@ -6,24 +6,23 @@
   <title>Библиотека библейских переводов | Сравнительный анализ</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
   <style>
-    /* === ОСНОВНЫЕ СТИЛИ (ДЛЯ ПК) === */
+    /* === ОСНОВНЫЕ ПЕРЕМЕННЫЕ СВЕТЛОЙ И ТЕМНОЙ ТЕМЫ === */
     :root {
       --primary: #4a6fa5; /* Синий (Акцент) */
       --secondary: #2c3e50; /* Темно-синий (Текст) */
-      --accent: #e67e22; /* Оранжевый */
+      --accent: #e67e22; /* Оранжевый (Номер стиха) */
       --text: #2c3e50;
       --text-light: #7f8c8d;
       --border: #dfe6e9;
-      --bg-light: #f8f9fa;
       --bg-card: #ffffff;
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      --shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.12);
       
       /* Переменные для Ночного Режима */
-      --dark-bg: #121212; /* Почти черный */
-      --dark-card: #1f1f1f; /* Темно-серый */
-      --dark-text: #f0f0f0; /* Светлый текст */
+      --dark-bg: #121212; 
+      --dark-card: #1f1f1f; 
+      --dark-text: #f0f0f0; 
       --dark-border: #333333;
     }
     
@@ -51,7 +50,7 @@
       box-shadow: var(--shadow);
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.9);
-      transition: background 0.3s, box-shadow 0.3s;
+      transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
     }
 
     .header {
@@ -81,7 +80,7 @@
     
     .header h1 i {
         margin-right: 12px;
-        color: #f39c12; /* Золотистый акцент */
+        color: #f39c12; 
     }
     
     .header p {
@@ -104,12 +103,38 @@
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
+    
+    /* === КНОПКА ПЕРЕКЛЮЧЕНИЯ ТЕМЫ === */
+    .theme-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 12px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s, color 0.3s;
+        z-index: 110;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .theme-toggle:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
 
     .translations-options-section {
       padding: 20px;
       background: linear-gradient(to bottom, #f8f9fa 0%, #f1f3f5 100%);
       border-bottom: 1px solid #e9ecef;
-      transition: background 0.3s;
+      transition: background 0.3s, border-bottom-color 0.3s;
     }
 
     .translations-header {
@@ -173,7 +198,7 @@
       top: 0;
       z-index: 100;
       box-shadow: 0 6px 20px rgba(0,0,0,0.05);
-      transition: background 0.3s, box-shadow 0.3s;
+      transition: background 0.3s, box-shadow 0.3s, border-bottom-color 0.3s;
     }
 
     .control-row {
@@ -255,15 +280,93 @@
         font-size: 14px;
     }
     
-    /* Стили для отключенных кнопок */
     .nav-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
         box-shadow: none;
-        background: #bdc3c7 !important; /* Серый цвет для отключенных */
+        background: #bdc3c7 !important; 
     }
 
-    /* === НОВЫЕ СТИЛИ ДЛЯ ГОРИЗОНТАЛЬНОГО СРАВНЕНИЯ (ПК) === */
+    /* === СТИЛИ ТЕМНОГО РЕЖИМА === */
+    body.dark-mode {
+        background: var(--dark-bg);
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .main-container {
+        background: var(--dark-card);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .header {
+        background: linear-gradient(135deg, #0f1c2b 0%, #1e3a5f 100%);
+    }
+
+    body.dark-mode .translations-options-section {
+        background: var(--dark-card);
+        border-bottom-color: var(--dark-border);
+    }
+
+    body.dark-mode .controls {
+        background: var(--dark-card);
+        border-bottom-color: var(--dark-border);
+    }
+    
+    body.dark-mode .translation-checkbox-container {
+        background: var(--dark-bg);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode .translation-checkbox-container.active {
+        background: rgba(74, 111, 165, 0.2); 
+        border-color: var(--primary);
+    }
+
+    body.dark-mode .translation-options label,
+    body.dark-mode label,
+    body.dark-mode .translations-header {
+        color: var(--dark-text);
+    }
+
+    body.dark-mode select {
+        background: var(--dark-bg);
+        color: var(--dark-text);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    body.dark-mode .translation-header {
+        background: var(--dark-card); 
+        border-bottom-color: var(--dark-border);
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .translation-card {
+        background: var(--dark-bg);
+        border-color: var(--dark-border);
+    }
+
+    body.dark-mode #verseContent {
+        background: linear-gradient(to bottom, var(--dark-card) 0%, #171717 100%);
+        border-color: var(--dark-border);
+    }
+    
+    body.dark-mode .verse-text {
+        color: var(--dark-text);
+    }
+
+    body.dark-mode .footer {
+        background: var(--dark-card);
+        border-top: 1px solid var(--dark-border);
+        color: var(--text-light);
+    }
+    
+    body.dark-mode .theme-toggle {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--dark-text);
+    }
+
+    /* === СТИЛИ КОНТЕНТА === */
     #verseContent {
       max-height: calc(100vh - 300px); 
       overflow-y: auto;
@@ -272,24 +375,19 @@
       transition: background 0.3s;
     }
 
-    /* Контейнер для всех стихов (наследует старый .verses-container) */
     .verses-container {
-      /* flex-direction: column; - удален, теперь управляется сеткой */
       gap: 28px;
-      padding-top: 20px; /* Отступ от заголовков переводов */
+      padding-top: 20px; 
     }
 
-    /* Общий контейнер для всех переводов одного стиха */
     .verse-group-wrapper {
         display: grid;
-        /* grid-template-columns будет задаваться в JS в зависимости от количества переводов */
-        gap: 20px; /* Промежуток между переводами */
+        gap: 20px; 
         padding: 15px 0 30px 0; 
         border-bottom: 2px solid var(--border);
         position: relative;
     }
     
-    /* Карточка перевода */
     .translation-card {
         padding: 16px;
         background: var(--bg-card);
@@ -299,7 +397,6 @@
         transition: background 0.3s, border-color 0.3s;
     }
 
-    /* Заголовок перевода (STICY) */
     .translation-header {
         font-size: 13px;
         font-weight: 700;
@@ -309,14 +406,18 @@
         letter-spacing: 0.5px;
         padding: 10px 0;
         border-bottom: 2px solid #f1f3f5;
-        /* Свойство для "прилипания" */
         position: sticky;
-        top: 90px; /* Должно быть ниже sticky .controls (top: 0) */
+        top: 90px; 
         z-index: 10;
-        background: var(--bg-card); /* Фон, чтобы скрыть текст под ним */
+        background: var(--bg-card); 
         display: flex;
         align-items: center;
-        transition: color 0.3s, border-bottom-color 0.3s;
+        transition: color 0.3s, border-bottom-color 0.3s, background 0.3s;
+    }
+
+    body.dark-mode .translation-header {
+        background: var(--dark-card);
+        border-bottom: 2px solid var(--dark-border);
     }
 
     .translation-header i {
@@ -324,7 +425,6 @@
         color: var(--primary);
     }
     
-    /* Номер стиха */
     .verse-num {
         display: inline-block;
         font-size: 14px;
@@ -341,13 +441,6 @@
         color: var(--text);
         font-weight: 400;
         transition: color 0.3s;
-        /* Убираем отступ для текста, номер стиха будет внутри */
-    }
-    
-    /* Убираем старые, неиспользуемые классы для нового дизайна */
-    .verse-block, .verse-number-label, .translation-content, .translation-item {
-      /* Эти классы больше не используются в новом JS-коде, но оставляем на всякий случай */
-      display: none !important;
     }
     
     .message-text {
@@ -360,26 +453,36 @@
       margin: 0 auto;
     }
     
-    /* === НОЧНОЙ РЕЖИМ (МОБИЛЬНАЯ АДАПТАЦИЯ) === */
+    .error-message {
+      text-align: left;
+      border: 1px solid #e74c3c;
+      background: #fdedec;
+      color: #c0392b;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
+
+    /* === АДАПТАЦИЯ (МОБИЛЬНЫЕ) === */
+    @media (min-width: 769px) {
+        /* Применяем Grid только на широких экранах */
+        .verse-group-wrapper {
+            grid-template-columns: repeat(var(--col-count), 1fr);
+        }
+    }
+    
     @media (max-width: 768px) {
-      /* ... (оставляем ваши мобильные стили без изменений) ... */
       body { 
         padding: 8px;
-        background: var(--dark-bg);
-        color: var(--dark-text);
       }
       
       .main-container {
         border-radius: 12px;
-        background: var(--dark-card);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
       }
       
       .translations-options-section,
       .controls {
         padding: 16px;
-        background: var(--dark-card); 
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
       
       .control-row { 
@@ -401,9 +504,6 @@
         padding: 12px 16px; 
         min-width: 100%;
         border-radius: 10px; 
-        background: var(--dark-bg);
-        border-color: rgba(255, 255, 255, 0.15);
-        box-shadow: none;
       }
 
       .translation-checkbox-container.active {
@@ -411,24 +511,8 @@
         border-color: var(--primary);
       }
       
-      .translation-options label {
-          color: var(--dark-text);
-      }
-
-      label {
-        color: var(--dark-text); 
-      }
-      
-      select {
-        background: var(--dark-bg);
-        color: var(--dark-text);
-        border-color: rgba(255, 255, 255, 0.2);
-      }
-      
       #verseContent { 
-        max-height: calc(100vh - 300px);
         padding: 16px;
-        background: var(--dark-card);
       }
       
       /* МОБИЛЬНЫЙ ВИД: Вертикальное отображение стихов */
@@ -448,46 +532,10 @@
       
       .translation-card {
         padding: 14px;
-        background: var(--dark-bg);
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
       }
       
       .translation-header {
         position: static; /* Отключаем sticky на мобильных */
-        background: var(--dark-bg);
-        color: var(--primary); 
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .translation-header i {
-          color: var(--primary);
-      }
-      
-      .verse-num {
-          font-size: 15px;
-          color: var(--accent);
-      }
-      
-      .translation-text {
-        color: var(--dark-text);
-        font-size: 16px;
-      }
-      
-      .message-text {
-        color: var(--text-light);
-      }
-      
-      .error-message {
-          background: #331111;
-          color: #ff9999;
-          border-color: #551111;
-      }
-      
-      .footer {
-        background: var(--dark-bg);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        color: var(--text-light);
       }
     }
   </style>
@@ -497,6 +545,10 @@
     
     <div class="header">
       <div class="header-content">
+        <button id="themeToggle" class="theme-toggle" aria-label="Переключить тему">
+          <i class="fas fa-moon"></i>
+        </button>
+        
         <h1><i class="fas fa-book-open"></i> Библиотека библейских переводов</h1>
         <p>Сравнительный анализ русских и украинских переводов Священного Писания</p>
         <h3 id="modalTitle"></h3>
@@ -541,15 +593,15 @@
 <script>
     // --- ПЕРЕМЕННЫЕ И НАСТРОЙКИ ---
     
-    // Глобальные переменные UI и состояния
+    // Глобальные переменные UI (ИСПРАВЛЕНО: ID в стиле camelCase)
     const bookSelect = document.getElementById('bookSelect');
     const chapterSelect = document.getElementById('chapterSelect');
     const prevChapterBtn = document.getElementById('prevChapter');
     const nextChapterBtn = document.getElementById('nextChapter');
-    const resultsContainer = document.getElementById('verseContent');
-    const headerTitle = document.getElementById('modalTitle');
+    const resultsContainer = document.getElementById('verseContent'); 
+    const headerTitle = document.getElementById('modalTitle'); 
     const translationCheckboxes = document.getElementById('translationCheckboxes');
-    const themeToggle = document.getElementById('themeToggle'); // НОВАЯ КНОПКА
+    const themeToggle = document.getElementById('themeToggle'); // Кнопка темы
 
     let currentBookIndex = 0;
     let currentChapter = 1;
@@ -559,7 +611,6 @@
     const LOCAL_DATA = {}; 
     const DEFAULT_TRANSLATIONS = ["SYNOD", "NRT"]; // Переводы по умолчанию
     
-    // ... (Остальные массивы BIBLE_BOOKS, TRANSLATION_FILES и TRANSLATION_NAMES без изменений)
     const TRANSLATION_FILES = {
         "SYNOD": "SYNOD_Синодальный.json",
         "NRT": "NRT_Новый.json",
@@ -640,11 +691,11 @@
 
     function updateNavButtons() {
         const isFirstChapter = currentBookIndex === 0 && currentChapter === 1;
-        const isLastBook = currentBookIndex === BIBLE_BOOKS.length - 1;
+        const isLastBook = BIBLE_BOOKS.length - 1;
         const isLastChapter = currentChapter === BIBLE_BOOKS[currentBookIndex].chapters;
         
         prevChapterBtn.disabled = isFirstChapter;
-        nextChapterBtn.disabled = isLastBook && isLastChapter;
+        nextChapterBtn.disabled = currentBookIndex === isLastBook && isLastChapter;
     }
 
     async function loadAllLocalData() {
@@ -669,14 +720,13 @@
         });
 
         await Promise.all(promises);
-        // Если были ошибки, не очищаем, чтобы пользователь их увидел
         if (resultsContainer.querySelector('.error-message') === null) {
              resultsContainer.innerHTML = '';
         }
         console.log("Все локальные данные загружены.");
     }
 
-    // (ОБНОВЛЕНО: Загрузка выбранных переводов из localStorage)
+    // Загрузка выбранных переводов из localStorage и настройка чекбоксов
     function initializeTranslationCheckboxes() {
         translationCheckboxes.innerHTML = '';
         
@@ -693,7 +743,6 @@
             input.name = 'translation';
             input.value = code;
             
-            // Проверяем, был ли этот перевод сохранен
             const isChecked = savedTranslations.includes(code);
 
             if (isChecked) {
@@ -708,7 +757,6 @@
                     container.classList.remove('active');
                 }
                 
-                // Сохраняем новое состояние в localStorage
                 saveSelectedTranslations(); 
                 loadComparisonView();
             });
@@ -727,7 +775,7 @@
         return Array.from(checkboxes).map(cb => cb.value);
     }
 
-    // (НОВАЯ ФУНКЦИЯ: Сохранение выбранных переводов)
+    // Сохранение выбранных переводов
     function saveSelectedTranslations() {
         const selected = getSelectedTranslations();
         localStorage.setItem('bibleApp_selectedTranslations', JSON.stringify(selected));
@@ -787,6 +835,7 @@
         localStorage.setItem('bibleApp_chapter', currentChapter);
     }
 
+    // Рендеринг сравнения (DocumentFragment + CSS Grid)
     function loadComparisonView() {
         if (Object.keys(LOCAL_DATA).length === 0) {
             if (!resultsContainer.querySelector('.error-message')) {
@@ -799,24 +848,25 @@
         const currentChapterNum = currentChapter.toString();
         let selectedTranslations = getSelectedTranslations();
         
-        // Если ни один перевод не выбран, используем значения по умолчанию
         if (selectedTranslations.length === 0) {
              resultsContainer.innerHTML = '<div class="message-text" style="color: var(--accent);">Выберите хотя бы один перевод для отображения.</div>';
+             updateNavButtons();
+             updateHeader();
              return;
         }
         
         const fragment = document.createDocumentFragment();
         
         const colCount = selectedTranslations.length;
-        // Устанавливаем grid-template-columns для .verse-group-wrapper (только на десктопе)
+        
+        // 1. Установка колонок для Grid (через CSS переменную)
         if (window.innerWidth > 768) { 
             resultsContainer.style.setProperty('--col-count', colCount);
         } else {
-            // На мобильных grid не используется, поэтому устанавливаем 1
             resultsContainer.style.setProperty('--col-count', 1);
         }
         
-        // 1. Генерация заголовков переводов (для sticky)
+        // 2. Генерация заголовков переводов (для sticky)
         const headerRow = document.createElement('div');
         headerRow.className = 'verse-group-wrapper translation-headers';
         headerRow.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
@@ -828,7 +878,7 @@
             headerRow.appendChild(header);
         });
         
-        // 2. Ищем максимальный номер стиха
+        // 3. Ищем максимальный номер стиха
         let maxVerses = 0;
         selectedTranslations.forEach(code => {
             const chapterData = LOCAL_DATA[code]?.[currentBookName]?.[currentChapterNum];
@@ -839,10 +889,12 @@
 
         if (maxVerses === 0) {
             resultsContainer.innerHTML = '<div class="message-text" style="color: var(--accent);">Данные для выбранной главы не найдены или не загружены.</div>';
+            updateNavButtons();
+            updateHeader();
             return;
         }
 
-        // 3. Генерация стихов
+        // 4. Генерация стихов
         for (let i = 1; i <= maxVerses; i++) {
             const verseNum = i.toString();
             
@@ -870,7 +922,7 @@
         
         resultsContainer.innerHTML = '';
         
-        // Создаем контейнер для стихов, чтобы правильно разместить sticky headers
+        // Создаем контейнер для стихов
         const versesContainer = document.createElement('div');
         versesContainer.className = 'verses-container'; 
         
@@ -885,12 +937,11 @@
         localStorage.setItem('bibleApp_chapter', currentChapter);
     }
     
-    // ОБНОВЛЕННАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ
+    // ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ
     async function initializeBibleSelector() {
         
-        initializeTheme(); // Инициализация темы
+        initializeTheme(); 
 
-        // Загружаем данные
         await loadAllLocalData(); 
         
         currentBookIndex = parseInt(localStorage.getItem('bibleApp_bookIndex')) || 0;
