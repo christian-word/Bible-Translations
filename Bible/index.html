@@ -541,22 +541,25 @@
 <script>
     // --- ПЕРЕМЕННЫЕ И НАСТРОЙКИ ---
     
-    // Глобальные переменные UI и состояния (ИСПРАВЛЕНО: ID в стиле camelCase)
+    // Глобальные переменные UI и состояния
     const bookSelect = document.getElementById('bookSelect');
     const chapterSelect = document.getElementById('chapterSelect');
     const prevChapterBtn = document.getElementById('prevChapter');
     const nextChapterBtn = document.getElementById('nextChapter');
-    const resultsContainer = document.getElementById('verseContent'); // Контейнер вывода
-    const headerTitle = document.getElementById('modalTitle'); // Заголовок
+    const resultsContainer = document.getElementById('verseContent');
+    const headerTitle = document.getElementById('modalTitle');
     const translationCheckboxes = document.getElementById('translationCheckboxes');
-    
+    const themeToggle = document.getElementById('themeToggle'); // НОВАЯ КНОПКА
+
     let currentBookIndex = 0;
     let currentChapter = 1;
 
     // --- ЛОКАЛЬНАЯ КОНФИГУРАЦИЯ ДАННЫХ ---
     
     const LOCAL_DATA = {}; 
+    const DEFAULT_TRANSLATIONS = ["SYNOD", "NRT"]; // Переводы по умолчанию
     
+    // ... (Остальные массивы BIBLE_BOOKS, TRANSLATION_FILES и TRANSLATION_NAMES без изменений)
     const TRANSLATION_FILES = {
         "SYNOD": "SYNOD_Синодальный.json",
         "NRT": "NRT_Новый.json",
@@ -609,9 +612,32 @@
         { name: "Иуды", chapters: 1, abbr: "Иуд" }, { name: "Откровение", chapters: 22, abbr: "Откр" }
     ];
     
+    // --- ФУНКЦИИ УПРАВЛЕНИЯ ТЕМОЙ ---
+
+    function initializeTheme() {
+        const savedTheme = localStorage.getItem('bibleApp_theme') || 'light';
+        setTheme(savedTheme);
+    }
+
+    function setTheme(theme) {
+        const isDark = theme === 'dark';
+        document.body.classList.toggle('dark-mode', isDark);
+        localStorage.setItem('bibleApp_theme', theme);
+        
+        // Обновляем иконку переключателя
+        themeToggle.innerHTML = isDark 
+            ? '<i class="fas fa-sun"></i>' 
+            : '<i class="fas fa-moon"></i>';
+    }
+
+    function toggleTheme() {
+        const currentTheme = localStorage.getItem('bibleApp_theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+    }
+
     // --- ОСНОВНЫЕ ФУНКЦИИ ---
 
-    // Функция, обновляющая статус кнопок навигации
     function updateNavButtons() {
         const isFirstChapter = currentBookIndex === 0 && currentChapter === 1;
         const isLastBook = currentBookIndex === BIBLE_BOOKS.length - 1;
@@ -621,7 +647,6 @@
         nextChapterBtn.disabled = isLastBook && isLastChapter;
     }
 
-    // НОВАЯ ФУНКЦИЯ: Загружает все 5 локальных JSON-файлов
     async function loadAllLocalData() {
         resultsContainer.innerHTML = '<div class="message-text" style="color: var(--primary); font-size: 1.2em;">⏳ Загрузка всех 5 переводов... Это может занять несколько секунд.</div>';
         
@@ -629,16 +654,14 @@
             try {
                 const response = await fetch(filename); 
                 if (!response.ok) {
-                    // Явное уведомление пользователя, если файл не найден (CORS/404)
-                    throw new Error(`Ошибка загрузки. Код: ${response.status}. Проверьте, загружены ли все 5 JSON-файлов на GitHub.`);
+                    throw new Error(`Ошибка загрузки. Код: ${response.status}. Проверьте, загружены ли все 5 JSON-файлов.`);
                 }
                 const data = await response.json();
                 LOCAL_DATA[code] = data;
                 console.log(`✅ Загружен файл: ${filename}`);
             } catch (error) {
-                // Выводим информативную ошибку
                 const errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message';
+                errorDiv.className = 'error-message message-text';
                 errorDiv.innerHTML = `❌ Не удалось загрузить данные для перевода ${TRANSLATION_NAMES[code]} (${code}).<br>Причина: ${error.message}`;
                 resultsContainer.appendChild(errorDiv);
                 console.error(`❌ Ошибка загрузки локального файла ${filename}:`, error);
@@ -646,37 +669,47 @@
         });
 
         await Promise.all(promises);
-        resultsContainer.innerHTML = ''; // Очищаем статус загрузки
+        // Если были ошибки, не очищаем, чтобы пользователь их увидел
+        if (resultsContainer.querySelector('.error-message') === null) {
+             resultsContainer.innerHTML = '';
+        }
         console.log("Все локальные данные загружены.");
     }
 
-    // (Обновлено: Добавлена логика для класса 'active' на контейнере)
+    // (ОБНОВЛЕНО: Загрузка выбранных переводов из localStorage)
     function initializeTranslationCheckboxes() {
         translationCheckboxes.innerHTML = '';
+        
+        const savedTranslations = JSON.parse(localStorage.getItem('bibleApp_selectedTranslations')) || DEFAULT_TRANSLATIONS;
+
         Object.entries(TRANSLATION_NAMES).forEach(([code, name]) => {
             
             const container = document.createElement('div');
             container.className = 'translation-checkbox-container';
-            container.setAttribute('data-code', code); // Для удобного доступа
+            container.setAttribute('data-code', code); 
 
             const input = document.createElement('input');
             input.type = 'checkbox';
             input.name = 'translation';
             input.value = code;
             
-            // SYNOD и NRT по умолчанию активны
-            if (code === 'SYNOD' || code === 'NRT') {
+            // Проверяем, был ли этот перевод сохранен
+            const isChecked = savedTranslations.includes(code);
+
+            if (isChecked) {
                 input.checked = true;
-                container.classList.add('active'); // Активируем контейнер
+                container.classList.add('active'); 
             }
 
-            // Обработчик события для обновления вида и данных
             input.addEventListener('change', function() {
                 if (this.checked) {
                     container.classList.add('active');
                 } else {
                     container.classList.remove('active');
                 }
+                
+                // Сохраняем новое состояние в localStorage
+                saveSelectedTranslations(); 
                 loadComparisonView();
             });
             
@@ -692,6 +725,12 @@
     function getSelectedTranslations() {
         const checkboxes = document.querySelectorAll('input[name="translation"]:checked');
         return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    // (НОВАЯ ФУНКЦИЯ: Сохранение выбранных переводов)
+    function saveSelectedTranslations() {
+        const selected = getSelectedTranslations();
+        localStorage.setItem('bibleApp_selectedTranslations', JSON.stringify(selected));
     }
     
     function updateChapterSelector() {
@@ -748,34 +787,38 @@
         localStorage.setItem('bibleApp_chapter', currentChapter);
     }
 
-    // НОВАЯ ЛОГИКА: С генерацией горизонтальной сетки и DocumentFragment
     function loadComparisonView() {
         if (Object.keys(LOCAL_DATA).length === 0) {
-            resultsContainer.innerHTML = '<div class="message-text" style="color: var(--accent);">Ожидание завершения загрузки данных.</div>';
+            if (!resultsContainer.querySelector('.error-message')) {
+                resultsContainer.innerHTML = '<div class="message-text" style="color: var(--accent);">Ожидание завершения загрузки данных.</div>';
+            }
             return;
         }
         
         const currentBookName = BIBLE_BOOKS[currentBookIndex].name;
         const currentChapterNum = currentChapter.toString();
-        const selectedTranslations = getSelectedTranslations();
+        let selectedTranslations = getSelectedTranslations();
         
-        // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: DocumentFragment для ускорения отрисовки
+        // Если ни один перевод не выбран, используем значения по умолчанию
+        if (selectedTranslations.length === 0) {
+             resultsContainer.innerHTML = '<div class="message-text" style="color: var(--accent);">Выберите хотя бы один перевод для отображения.</div>';
+             return;
+        }
+        
         const fragment = document.createDocumentFragment();
         
-        // 1. Устанавливаем количество колонок для CSS Grid
-        const colCount = selectedTranslations.length || 1;
-        // Только если ширина экрана позволяет (для десктопов), устанавливаем grid
+        const colCount = selectedTranslations.length;
+        // Устанавливаем grid-template-columns для .verse-group-wrapper (только на десктопе)
         if (window.innerWidth > 768) { 
             resultsContainer.style.setProperty('--col-count', colCount);
-            resultsContainer.style.display = 'block'; // Убеждаемся, что не скрыт
         } else {
+            // На мобильных grid не используется, поэтому устанавливаем 1
             resultsContainer.style.setProperty('--col-count', 1);
         }
         
-        // 2. Генерация заголовков переводов (за пределами стихов)
+        // 1. Генерация заголовков переводов (для sticky)
         const headerRow = document.createElement('div');
         headerRow.className = 'verse-group-wrapper translation-headers';
-        // Устанавливаем колонки для заголовков
         headerRow.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
         
         selectedTranslations.forEach(code => {
@@ -785,7 +828,7 @@
             headerRow.appendChild(header);
         });
         
-        // 3. Ищем максимальный номер стиха
+        // 2. Ищем максимальный номер стиха
         let maxVerses = 0;
         selectedTranslations.forEach(code => {
             const chapterData = LOCAL_DATA[code]?.[currentBookName]?.[currentChapterNum];
@@ -799,11 +842,10 @@
             return;
         }
 
-        // 4. Генерация стихов
+        // 3. Генерация стихов
         for (let i = 1; i <= maxVerses; i++) {
             const verseNum = i.toString();
             
-            // Главный контейнер для всех переводов одного стиха
             const verseWrapper = document.createElement('div');
             verseWrapper.className = 'verse-group-wrapper';
             verseWrapper.style.gridTemplateColumns = `repeat(${colCount}, 1fr)`;
@@ -826,44 +868,34 @@
             fragment.appendChild(verseWrapper);
         }
         
-        // Очистка и вставка за один раз (оптимизация)
         resultsContainer.innerHTML = '';
         
-        // Вставляем заголовки только на десктопе, где они нужны для sticky
-        if (window.innerWidth > 768) {
-             // Создаем контейнер для стихов, чтобы избежать конфликта с sticky заголовками
-            const versesContainer = document.createElement('div');
-            versesContainer.className = 'verses-container'; 
-            
-            // Сначала вставляем заголовки
-            resultsContainer.appendChild(headerRow);
-            
-            // Затем вставляем сам фрагмент стихов
-            versesContainer.appendChild(fragment);
-            resultsContainer.appendChild(versesContainer);
-            
-        } else {
-             // На мобильных вставляем только стихи (фрагмент)
-             resultsContainer.appendChild(fragment);
-        }
+        // Создаем контейнер для стихов, чтобы правильно разместить sticky headers
+        const versesContainer = document.createElement('div');
+        versesContainer.className = 'verses-container'; 
+        
+        // Вставляем заголовки и стихи
+        resultsContainer.appendChild(headerRow);
+        versesContainer.appendChild(fragment);
+        resultsContainer.appendChild(versesContainer);
         
         updateHeader();
-        updateNavButtons(); // Обновление кнопок
+        updateNavButtons(); 
         localStorage.setItem('bibleApp_bookIndex', currentBookIndex);
         localStorage.setItem('bibleApp_chapter', currentChapter);
     }
     
     // ОБНОВЛЕННАЯ ФУНКЦИЯ ИНИЦИАЛИЗАЦИИ
     async function initializeBibleSelector() {
-        // УДАЛЕНО: атрибут onload="initializeBibleSelector()" в <body>
         
-        // Сначала загружаем данные
+        initializeTheme(); // Инициализация темы
+
+        // Загружаем данные
         await loadAllLocalData(); 
         
         currentBookIndex = parseInt(localStorage.getItem('bibleApp_bookIndex')) || 0;
         currentChapter = parseInt(localStorage.getItem('bibleApp_chapter')) || 1;
 
-        // Инициализация селектора книг
         BIBLE_BOOKS.forEach((book, index) => {
             const option = document.createElement('option');
             option.value = index;
@@ -876,7 +908,9 @@
         initializeTranslationCheckboxes();
         updateChapterSelector();
         
-        // Устанавливаем слушателей событий
+        // --- Слушатели событий ---
+        themeToggle.addEventListener('click', toggleTheme);
+        
         bookSelect.addEventListener('change', function() {
             currentBookIndex = parseInt(this.value);
             currentChapter = 1;
@@ -895,7 +929,6 @@
         prevChapterBtn.addEventListener('click', goToPrevChapter);
         nextChapterBtn.addEventListener('click', goToNextChapter);
 
-        // Запускаем отображение
         loadComparisonView();
     }
     
